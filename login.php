@@ -22,7 +22,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $_SESSION['user_id'] = $user_id;
                 $_SESSION['full_name'] = $users_data[$user_id]['full_name'];
                 $_SESSION['email'] = $users_data[$user_id]['email'];
-                header("Location: main_dashboard.php");
+                header("Location: dashboard_main.php");
                 exit();
             } else {
                 $error_message = "Invalid User ID or password!";

@@ -12,6 +12,53 @@ $full_name = $_SESSION['full_name'];
 
 $success_message = "";
 $error_message = "";
+$current_file = "";
+
+// Load user's saved default data
+$user_data_file = 'user_defaults.json';
+$user_defaults = [];
+
+if (file_exists($user_data_file)) {
+    $all_defaults = json_decode(file_get_contents($user_data_file), true);
+    if (isset($all_defaults[$user_id])) {
+        $user_defaults = $all_defaults[$user_id];
+    }
+}
+
+// Handle Save button - Save default user data
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['save_defaults'])) {
+    $name = trim($_POST['name']);
+    $department = trim($_POST['department']);
+    
+    // Load all user defaults
+    $all_defaults = [];
+    if (file_exists($user_data_file)) {
+        $all_defaults = json_decode(file_get_contents($user_data_file), true);
+    }
+    
+    // Save this user's defaults
+    $all_defaults[$user_id] = [
+        'name' => $name,
+        'department' => $department,
+        'saved_at' => date('Y-m-d H:i:s')
+    ];
+    
+    if (file_put_contents($user_data_file, json_encode($all_defaults, JSON_PRETTY_PRINT))) {
+        $success_message = "Default data saved successfully! Your information will be auto-filled next time.";
+        $user_defaults = $all_defaults[$user_id];
+    } else {
+        $error_message = "Error saving default data.";
+    }
+}
+
+// Handle file removal
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['remove_file'])) {
+    if (isset($_SESSION['temp_file']) && file_exists($_SESSION['temp_file'])) {
+        unlink($_SESSION['temp_file']);
+        unset($_SESSION['temp_file']);
+        $success_message = "File removed successfully!";
+    }
+}
 
 // Handle form submission
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_recognition'])) {
@@ -28,6 +75,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_recognition']))
     $file_uploaded = false;
     $file_path = "";
     
+    // Check if there's already a file in session
+    if (isset($_SESSION['temp_file']) && file_exists($_SESSION['temp_file'])) {
+        $file_uploaded = true;
+        $file_path = $_SESSION['temp_file'];
+    }
+    
+    // Handle new file upload
     if (isset($_FILES['document']) && $_FILES['document']['error'] == 0) {
         // Check file type - Only PDF allowed
         $file_type = strtolower(pathinfo($_FILES['document']['name'], PATHINFO_EXTENSION));
@@ -44,12 +98,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_recognition']))
                 mkdir($upload_dir, 0777, true);
             }
             
+            // Remove old temp file if exists
+            if (isset($_SESSION['temp_file']) && file_exists($_SESSION['temp_file'])) {
+                unlink($_SESSION['temp_file']);
+            }
+            
             $file_name = time() . '_' . basename($_FILES['document']['name']);
             $target_file = $upload_dir . $file_name;
             
             if (move_uploaded_file($_FILES['document']['tmp_name'], $target_file)) {
                 $file_uploaded = true;
                 $file_path = $target_file;
+                $_SESSION['temp_file'] = $target_file;
             } else {
                 $error_message = "Error uploading file. Please try again.";
             }
@@ -84,10 +144,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_recognition']))
         
         if (file_put_contents($submissions_file, json_encode($submissions, JSON_PRETTY_PRINT))) {
             $success_message = "Recognition submitted successfully!";
+            // Clear temp file from session after successful submission
+            unset($_SESSION['temp_file']);
         } else {
             $error_message = "Error saving submission. Please try again.";
         }
     }
+}
+
+// Check if there's a temp file for display
+if (isset($_SESSION['temp_file']) && file_exists($_SESSION['temp_file'])) {
+    $current_file = $_SESSION['temp_file'];
 }
 ?>
 
@@ -262,6 +329,92 @@ body {
     font-size: 13px;
 }
 
+/* File Preview Card */
+.file-preview {
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(139, 92, 246, 0.4);
+    border-radius: 12px;
+    padding: 15px 20px;
+    margin-top: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+}
+
+.file-preview-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.file-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: white;
+    font-weight: bold;
+}
+
+.file-details {
+    flex: 1;
+}
+
+.file-name {
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 3px;
+    word-break: break-all;
+}
+
+.file-size {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 12px;
+}
+
+.file-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-view, .btn-remove {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    transition: all 0.3s;
+}
+
+.btn-view {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+}
+
+.btn-view:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(59, 130, 246, 0.5);
+}
+
+.btn-remove {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+}
+
+.btn-remove:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(239, 68, 68, 0.5);
+}
+
+/* Form actions button styling */
 .form-actions {
     display: flex;
     gap: 15px;
@@ -299,21 +452,38 @@ body {
     box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4);
 }
 
-.btn:hover {
+.btn:hover:not(:disabled) {
     transform: translateY(-4px);
     box-shadow: 0 15px 35px rgba(59, 130, 246, 0.6);
 }
 
-.btn-save:hover {
+.btn-save:hover:not(:disabled) {
     box-shadow: 0 15px 35px rgba(59, 130, 246, 0.7);
 }
 
-.btn-edit:hover {
+.btn-edit:hover:not(:disabled) {
     box-shadow: 0 15px 35px rgba(139, 92, 246, 0.7);
 }
 
-.btn-submit:hover {
+.btn-submit:hover:not(:disabled) {
     box-shadow: 0 15px 35px rgba(16, 185, 129, 0.7);
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.field-locked {
+    background: rgba(200, 200, 200, 0.95) !important;
+    cursor: not-allowed !important;
+}
+
+.info-text {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 13px;
+    margin-top: 10px;
+    text-align: center;
 }
 
 /* Dropdown Guide */
@@ -446,7 +616,7 @@ body {
 <!-- Top Navigation -->
 <div class="top-nav">
     <div class="nav-links">
-        <a href="dashboard_main.php">Review Submission</a>
+        <a href="review_submission.php">Review Submission</a>
         <span>|</span>
         <a href="dashboard_main.php">Main Page</a>
         <span>|</span>
@@ -468,17 +638,25 @@ body {
             <div class="error-message"><?php echo htmlspecialchars($error_message); ?></div>
         <?php endif; ?>
         
-        <form method="POST" enctype="multipart/form-data">
+        <form method="POST" enctype="multipart/form-data" id="recognitionForm">
             
             <div class="form-group">
                 <label>Name :</label>
-                <input type="text" name="name" required placeholder="Enter name">
+                <input type="text" name="name" id="name" required placeholder="Enter name" 
+                       value="<?php echo isset($user_defaults['name']) ? htmlspecialchars($user_defaults['name']) : ''; ?>"
+                       <?php echo isset($user_defaults['name']) ? 'readonly class="field-locked"' : ''; ?>>
             </div>
             
             <div class="form-group">
                 <label>Department :</label>
-                <input type="text" name="department" required placeholder="Enter department">
+                <input type="text" name="department" id="department" required placeholder="Enter department"
+                       value="<?php echo isset($user_defaults['department']) ? htmlspecialchars($user_defaults['department']) : ''; ?>"
+                       <?php echo isset($user_defaults['department']) ? 'readonly class="field-locked"' : ''; ?>>
             </div>
+            
+            <?php if (isset($user_defaults['name'])): ?>
+                <p class="info-text">💡 Your default information is auto-filled. Click "Edit" to modify, or continue with other fields.</p>
+            <?php endif; ?>
             
             <div class="form-group">
                 <label>Category :</label>
@@ -523,18 +701,46 @@ body {
             
             <div class="form-group">
                 <label>Document upload :</label>
-                <div class="upload-container">
-                    <label for="file-upload" class="upload-btn">Upload</label>
-                    <input id="file-upload" type="file" name="document" style="display: none;" accept=".pdf">
-                    <span class="file-info">PDF only, max 2MB</span>
-                </div>
+                
+                <?php if ($current_file): ?>
+                    <!-- File Preview Card -->
+                    <div class="file-preview">
+                        <div class="file-preview-info">
+                            <div class="file-icon">📄</div>
+                            <div class="file-details">
+                                <div class="file-name"><?php echo htmlspecialchars(basename($current_file)); ?></div>
+                                <div class="file-size"><?php echo number_format(filesize($current_file) / 1024, 2); ?> KB</div>
+                            </div>
+                        </div>
+                        <div class="file-actions">
+                            <button type="button" class="btn-view" onclick="viewPDF('view_pdf.php?file=<?php echo urlencode($current_file); ?>')">View</button>
+                            <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to remove this file?');">
+                                <button type="submit" name="remove_file" class="btn-remove">Remove</button>
+                            </form>
+                        </div>
+                    </div>
+                <?php else: ?>
+                    <!-- Upload Section -->
+                    <div class="upload-container">
+                        <label for="file-upload" class="upload-btn">Upload</label>
+                        <input id="file-upload" type="file" name="document" style="display: none;" accept=".pdf" onchange="this.form.submit()">
+                        <span class="file-info">PDF only, max 2MB</span>
+                    </div>
+                <?php endif; ?>
+                
                 <span id="file-name" style="color: rgba(255, 255, 255, 0.7); font-size: 13px; margin-top: 5px;"></span>
             </div>
             
             <div class="form-actions">
-                <button type="button" class="btn btn-save">Save</button>
-                <button type="button" class="btn btn-edit">Edit</button>
-                <button type="submit" name="submit_recognition" class="btn btn-submit">Submit</button>
+                <button type="submit" name="save_defaults" class="btn btn-save" id="saveBtn">
+                    💾 Save Defaults
+                </button>
+                <button type="button" class="btn btn-edit" id="editBtn" onclick="enableEditing()">
+                    ✏️ Edit
+                </button>
+                <button type="submit" name="submit_recognition" class="btn btn-submit">
+                    ✓ Submit
+                </button>
             </div>
             
         </form>
@@ -590,8 +796,66 @@ body {
 </div>
 
 <script>
+// Enable editing for locked fields
+function enableEditing() {
+    const nameField = document.getElementById('name');
+    const deptField = document.getElementById('department');
+    const editBtn = document.getElementById('editBtn');
+    
+    if (nameField && deptField) {
+        nameField.removeAttribute('readonly');
+        nameField.classList.remove('field-locked');
+        deptField.removeAttribute('readonly');
+        deptField.classList.remove('field-locked');
+        
+        // Change button text
+        editBtn.textContent = '✓ Editing Enabled';
+        editBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+        editBtn.disabled = true;
+        
+        // Focus on name field
+        nameField.focus();
+    }
+}
+
+// Check if fields are filled to enable/disable Save button
+function checkSaveButton() {
+    const nameField = document.getElementById('name');
+    const deptField = document.getElementById('department');
+    const saveBtn = document.getElementById('saveBtn');
+    
+    if (nameField && deptField && saveBtn) {
+        if (nameField.value.trim() && deptField.value.trim()) {
+            saveBtn.disabled = false;
+        } else {
+            saveBtn.disabled = true;
+        }
+    }
+}
+
+// Add event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    const nameField = document.getElementById('name');
+    const deptField = document.getElementById('department');
+    
+    if (nameField) {
+        nameField.addEventListener('input', checkSaveButton);
+    }
+    if (deptField) {
+        deptField.addEventListener('input', checkSaveButton);
+    }
+    
+    // Initial check
+    checkSaveButton();
+});
+
+// View PDF in new tab
+function viewPDF(filePath) {
+    window.open(filePath, '_blank');
+}
+
 // Show selected file name and validate
-document.getElementById('file-upload').addEventListener('change', function(e) {
+document.getElementById('file-upload')?.addEventListener('change', function(e) {
     const file = e.target.files[0];
     const fileNameDisplay = document.getElementById('file-name');
     
@@ -601,8 +865,8 @@ document.getElementById('file-upload').addEventListener('change', function(e) {
         if (fileType !== 'pdf') {
             alert('Error: Only PDF files are allowed!');
             this.value = ''; // Clear the selection
-            fileNameDisplay.textContent = '';
-            return;
+            if (fileNameDisplay) fileNameDisplay.textContent = '';
+            return false;
         }
         
         // Check file size (2MB = 2 * 1024 * 1024 bytes)
@@ -610,16 +874,16 @@ document.getElementById('file-upload').addEventListener('change', function(e) {
         if (file.size > maxSize) {
             alert('Error: File size must not exceed 2MB!');
             this.value = ''; // Clear the selection
-            fileNameDisplay.textContent = '';
-            return;
+            if (fileNameDisplay) fileNameDisplay.textContent = '';
+            return false;
         }
         
-        // If validation passes, show file info
-        const fileSizeKB = (file.size / 1024).toFixed(2);
-        fileNameDisplay.textContent = '✓ Selected: ' + file.name + ' (' + fileSizeKB + ' KB)';
-        fileNameDisplay.style.color = '#10b981';
-    } else {
-        fileNameDisplay.textContent = '';
+        // If validation passes, the form will auto-submit
+        if (fileNameDisplay) {
+            const fileSizeKB = (file.size / 1024).toFixed(2);
+            fileNameDisplay.textContent = '⏳ Uploading: ' + file.name + ' (' + fileSizeKB + ' KB)';
+            fileNameDisplay.style.color = '#f59e0b';
+        }
     }
 });
 </script>

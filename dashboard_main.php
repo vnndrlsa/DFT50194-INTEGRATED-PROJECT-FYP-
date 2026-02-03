@@ -9,6 +9,25 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 
 $user_id = $_SESSION['user_id'];
 $full_name = $_SESSION['full_name'];
+
+// Admin password - ONLY ADMIN AND DEVELOPER KNOW THIS
+define('ADMIN_PASSWORD', 'PMU@dmin2026'); // Change this to your secret password
+
+$error_message = "";
+
+// Handle admin password verification
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['admin_password'])) {
+    $entered_password = $_POST['admin_password'];
+    
+    if ($entered_password === ADMIN_PASSWORD) {
+        // Password correct - grant admin access
+        $_SESSION['admin_access'] = true;
+        header("Location: dashboard_endorsement.php");
+        exit();
+    } else {
+        $error_message = "Incorrect password! Access denied.";
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -264,6 +283,132 @@ body::after {
         padding: 20px;
     }
 }
+
+/* Password Modal */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+}
+
+.modal.show {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: linear-gradient(135deg, #1e3a8a 0%, #160047 100%);
+    border: 2px solid rgba(139, 92, 246, 0.5);
+    border-radius: 25px;
+    padding: 40px;
+    max-width: 450px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.modal-header h2 {
+    color: white;
+    font-size: 26px;
+    margin-bottom: 10px;
+}
+
+.modal-header p {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 14px;
+}
+
+.lock-icon {
+    font-size: 60px;
+    margin-bottom: 20px;
+}
+
+.modal-body {
+    margin-bottom: 25px;
+}
+
+.modal-body input {
+    width: 100%;
+    padding: 15px 20px;
+    border-radius: 12px;
+    border: 2px solid rgba(139, 92, 246, 0.5);
+    background: rgba(255, 255, 255, 0.95);
+    font-size: 16px;
+    transition: all 0.3s;
+}
+
+.modal-body input:focus {
+    outline: none;
+    border-color: #8b5cf6;
+    background: white;
+    box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.2);
+}
+
+.modal-footer {
+    display: flex;
+    gap: 15px;
+}
+
+.modal-btn {
+    flex: 1;
+    padding: 15px 25px;
+    border-radius: 12px;
+    border: none;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-transform: uppercase;
+}
+
+.btn-submit-password {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+}
+
+.btn-cancel {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+}
+
+.modal-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.error-modal {
+    background: rgba(239, 68, 68, 0.2);
+    border: 2px solid #ef4444;
+    color: white;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    text-align: center;
+    font-weight: 600;
+}
 </style>
 </head>
 
@@ -305,23 +450,75 @@ body::after {
     </div>
     
     <!-- PMURAS ENDORSEMENT Card -->
-    <div class="card">
+    <div class="card" onclick="showPasswordModal()">
         <div class="card-content">
             <h2>
                 PMURAS<br>
                 <span>ENDORSEMENT</span>
             </h2>
-            <div class="admin-badge">ADMINISTRATOR ACCESS ONLY</div>
-            <p style="opacity: 0.7; font-style: italic;">This section is restricted to administrators only. Please contact your system administrator for access.</p>
+            <div class="admin-badge">🔒 PASSWORD PROTECTED</div>
+            <p>Administrator access required. Enter the admin password to access the endorsement panel.</p>
         </div>
         
-        <button class="enter-btn" style="opacity: 0.5; cursor: not-allowed;" disabled>
+        <button type="button" class="enter-btn" onclick="showPasswordModal(); event.stopPropagation();">
             <span class="arrow">»</span>
             <span>ENTER</span>
         </button>
     </div>
 
 </div>
+
+<!-- Password Modal -->
+<div id="passwordModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="lock-icon">🔐</div>
+            <h2>Admin Access Required</h2>
+            <p>Please enter the administrator password</p>
+        </div>
+        
+        <?php if ($error_message): ?>
+            <div class="error-modal"><?php echo htmlspecialchars($error_message); ?></div>
+        <?php endif; ?>
+        
+        <form method="POST" action="">
+            <div class="modal-body">
+                <input type="password" name="admin_password" id="admin_password" 
+                       placeholder="Enter admin password" required autofocus>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="modal-btn btn-cancel" onclick="closePasswordModal()">Cancel</button>
+                <button type="submit" class="modal-btn btn-submit-password">Submit</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function showPasswordModal() {
+    document.getElementById('passwordModal').classList.add('show');
+    document.getElementById('admin_password').focus();
+}
+
+function closePasswordModal() {
+    document.getElementById('passwordModal').classList.remove('show');
+    document.getElementById('admin_password').value = '';
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('passwordModal');
+    if (event.target === modal) {
+        closePasswordModal();
+    }
+}
+
+// Show modal if there's an error message
+<?php if ($error_message): ?>
+    showPasswordModal();
+<?php endif; ?>
+</script>
 
 </body>
 </html>
