@@ -200,17 +200,30 @@ if (empty($available_years)) $available_years = [date('Y')];
             table, table tbody, table tr { display: block; width: 100%; }
             table tr { margin-bottom: 15px; border: 1px solid #ddd; border-radius: 10px; padding: 15px; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
             table td { display: block; text-align: left !important; padding: 8px 0 !important; border: none !important; white-space: normal !important; }
-            table td:nth-child(1)::before { content: "Bil: ";             font-weight: bold; color: #bc1b68; }
-            table td:nth-child(2)::before { content: "Name: ";            font-weight: bold; color: #bc1b68; }
-            table td:nth-child(3)::before { content: "Department: ";      font-weight: bold; color: #bc1b68; }
-            table td:nth-child(4)::before { content: "Category: ";        font-weight: bold; color: #bc1b68; }
-            table td:nth-child(5)::before { content: "Level: ";           font-weight: bold; color: #bc1b68; }
-            table td:nth-child(6)::before { content: "Award Date: ";      font-weight: bold; color: #bc1b68; }
-            table td:nth-child(7)::before { content: "Submission Date: "; font-weight: bold; color: #bc1b68; }
-            table td:nth-child(8)::before { content: "Status: ";          font-weight: bold; color: #bc1b68; }
-            table td:nth-child(9)::before { content: "Action: ";          font-weight: bold; color: #bc1b68; display: block; margin-bottom: 10px; }
-            table td:last-child { display: flex; flex-direction: column; gap: 8px; padding-top: 10px !important; }
-            table td:last-child .btn, table td:last-child a { width: 100%; text-align: center; margin: 0 !important; }
+
+            /* Manage Submission mobile labels (unchanged) */
+            #submissionsTable td:nth-child(1)::before { content: "Bil: ";             font-weight: bold; color: #bc1b68; }
+            #submissionsTable td:nth-child(2)::before { content: "Name: ";            font-weight: bold; color: #bc1b68; }
+            #submissionsTable td:nth-child(3)::before { content: "Department: ";      font-weight: bold; color: #bc1b68; }
+            #submissionsTable td:nth-child(4)::before { content: "Category: ";        font-weight: bold; color: #bc1b68; }
+            #submissionsTable td:nth-child(5)::before { content: "Level: ";           font-weight: bold; color: #bc1b68; }
+            #submissionsTable td:nth-child(6)::before { content: "Award Date: ";      font-weight: bold; color: #bc1b68; }
+            #submissionsTable td:nth-child(7)::before { content: "Submission Date: "; font-weight: bold; color: #bc1b68; }
+            #submissionsTable td:nth-child(8)::before { content: "Status: ";          font-weight: bold; color: #bc1b68; }
+            #submissionsTable td:nth-child(9)::before { content: "Action: ";          font-weight: bold; color: #bc1b68; display: block; margin-bottom: 10px; }
+            #submissionsTable td:last-child { display: flex; flex-direction: column; gap: 8px; padding-top: 10px !important; }
+            #submissionsTable td:last-child .btn, #submissionsTable td:last-child a { width: 100%; text-align: center; margin: 0 !important; }
+
+            /* User Management mobile labels — shifted +1 due to new Staff ID column */
+            #userTable td:nth-child(1)::before { content: "Bil: ";        font-weight: bold; color: #bc1b68; }
+            #userTable td:nth-child(2)::before { content: "Staff ID: ";   font-weight: bold; color: #bc1b68; }
+            #userTable td:nth-child(3)::before { content: "Name: ";       font-weight: bold; color: #bc1b68; }
+            #userTable td:nth-child(4)::before { content: "Department: "; font-weight: bold; color: #bc1b68; }
+            #userTable td:nth-child(5)::before { content: "Action: ";     font-weight: bold; color: #bc1b68; display: block; margin-bottom: 10px; }
+            #userTable td:nth-child(6)::before { content: "Status: ";     font-weight: bold; color: #bc1b68; }
+            #userTable td:nth-child(5) { display: flex; flex-direction: column; gap: 8px; padding-top: 10px !important; }
+            #userTable td:nth-child(5) .btn, #userTable td:nth-child(5) a { width: 100%; text-align: center; margin: 0 !important; }
+
             .btn { padding: 10px 16px; font-size: 14px; }
             .report-card { padding: 15px; }
             .report-filter { flex-direction: column; display: flex; }
@@ -526,7 +539,16 @@ if (empty($available_years)) $available_years = [date('Y')];
                 <span id="userCountLabel" style="color:#888;font-size:13px;white-space:nowrap;"></span>
             </div>
             <table id="userTable">
-                <thead><tr><th>Bil.</th><th>Name</th><th>Department</th><th>Action</th><th>Status</th></tr></thead>
+                <thead>
+                    <tr>
+                        <th>Bil.</th>
+                        <th>Staff ID</th>
+                        <th>Name</th>
+                        <th>Department</th>
+                        <th>Action</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
                 <tbody>
                 <?php
                 $sql = "SELECT * FROM users WHERE role = 'staff' ORDER BY status ASC, full_name";
@@ -537,6 +559,7 @@ if (empty($available_years)) $available_years = [date('Y')];
                 ?>
                 <tr data-status="<?php echo $row['status']; ?>" data-name="<?php echo strtolower(htmlspecialchars($row['full_name'])); ?>" style="<?php echo $isActive ? '' : 'background:#fff3cd;'; ?>">
                     <td class="bil-cell"><?php echo $bil++; ?></td>
+                    <td><?php echo htmlspecialchars($row['staff_id'] ?? '-'); ?></td>
                     <td><?php echo htmlspecialchars($row['full_name']); ?><?php if ($row['is_new_registration'] == 1): ?><span style="background:#ff9800;color:white;padding:2px 8px;border-radius:5px;font-size:11px;margin-left:5px;">NEW</span><?php endif; ?></td>
                     <td><?php echo htmlspecialchars($row['department']); ?></td>
                     <td>
